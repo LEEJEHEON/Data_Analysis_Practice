@@ -37,24 +37,24 @@ def get_all_player_data():
         league_select.select_by_visible_text("KBO 정규시즌")
         time.sleep(2)
         
-        # "기록보기" 버튼 클릭
-        # record_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@value='기록보기']")))
-        # record_btn.click()
-        # time.sleep(3)
-        
         for team in TEAM_LIST:
             all_data = []
-            current_page= 1
+            current_num = 1
             # 팀 선택: 
             league_select = Select(driver.find_element(By.ID, "cphContents_cphContents_cphContents_ddlTeam_ddlTeam"))
             league_select.select_by_visible_text(team)
             time.sleep(2)
+            # 페이지 선택(초기화) : 
+            next_btn_id = f"cphContents_cphContents_cphContents_ucPager_btnNo{current_num}"
+            next_btn = driver.find_element(By.ID, next_btn_id)
+            driver.execute_script("arguments[0].click();", next_btn)
+            time.sleep(2)
+
             crawling_flag = True
-            while crawling_flag: 
+            while crawling_flag:  
                 # 현재 페이지 테이블 데이터 추출
                 soup = BeautifulSoup(driver.page_source, 'html.parser')
                 table = soup.select_one('div.record_result table')
-                print("--data--")
                 if table:
                     rows = table.find('tbody').find_all('tr')
                     for row in rows:
@@ -62,27 +62,27 @@ def get_all_player_data():
                         if len(cols) >= 12:  # 유효 데이터 행
                             all_data.append(cols)
                     
-                # 3. 다음 페이지 버튼 찾기 (class="on"이 아닌 숫자 버튼)
+                # 3. 다음 페이지 버튼 클릭
                 try:
-                    # next_buttons = driver.find_elements(By.CSS_SELECTOR,"a[id*='btnNo']:not(.on)")
                     next_btn_id = f"cphContents_cphContents_cphContents_ucPager_btnNo{current_num+1}"
                     next_btn = driver.find_element(By.ID, next_btn_id)
-                    if next_buttons:
-                        next_btn = next_buttons[0]
+                    if next_btn:
                         driver.execute_script("arguments[0].click();", next_btn)
                         time.sleep(2)
-                        print ("next btn : " , next_btn)
+                        current_num += 1
                     else :
                         crawling_flag=False
                 except:
                     break
-                # DataFrame 생성 (컬럼명은 페이지 thead 기준)
-                columns = ['순위', '선수명', '팀명', 'AVG', 'G', 'PA', 'AB', 'R', 'H', 
+                
+            # DataFrame 생성 (컬럼명은 페이지 thead 기준)
+            columns = ['순위', '선수명', '팀명', 'AVG', 'G', 'PA', 'AB', 'R', 'H', 
                         '2B', '3B', 'HR', 'TB', 'RBI', 'SAC', 'SF', 'BB', 'HBP', 'SO', 'GDP', 'TB%']
-                df = pd.DataFrame(all_data, columns=columns[:len(all_data[0])] if all_data else columns)
+            df = pd.DataFrame(all_data, columns=columns[:len(all_data[0])] if all_data else columns)
 
             # CSV 저장
             output_file = "./Data/kbo_2025_hitter_"+team+".csv"
+
             df.to_csv(output_file, index=False, encoding='utf-8-sig')
             print(f"완료! {team}팀 {len(df)}명의 선수 데이터가 {output_file}에 저장되었습니다.[web:3][web:5]")
     finally:
