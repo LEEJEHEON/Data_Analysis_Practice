@@ -17,10 +17,11 @@ def setup_driver():
     options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
     return webdriver.Chrome(options=options)
 
-def get_all_player_data():
+def get_all_player_data(year,Position,Page):
     driver = setup_driver()
-    base_url = "https://www.koreabaseball.com/Record/Player/HitterBasic/Basic1.aspx"
-    
+    base_url = "https://www.koreabaseball.com/Record/Player/"+Position+"/"
+    base_url = base_url + Page + ".aspx"
+    print ("base_url :", base_url)
     TEAM_LIST = ["LG","한화","SSG","삼성","NC","KT","롯데","KIA","두산","키움"]
 
     try:
@@ -59,9 +60,7 @@ def get_all_player_data():
                     rows = table.find('tbody').find_all('tr')
                     for row in rows:
                         cols = [col.get_text(strip=True) for col in row.find_all(['th', 'td'])]
-                        if len(cols) >= 12:  # 유효 데이터 행
-                            all_data.append(cols)
-                    
+                        all_data.append(cols)
                 # 3. 다음 페이지 버튼 클릭
                 try:
                     next_btn_id = f"cphContents_cphContents_cphContents_ucPager_btnNo{current_num+1}"
@@ -76,32 +75,77 @@ def get_all_player_data():
                     break
                 
             # DataFrame 생성 (컬럼명은 페이지 thead 기준)
-            columns = ['순위', '선수명', '팀명', 'AVG', 'G', 'PA', 'AB', 'R', 'H', 
-                        '2B', '3B', 'HR', 'TB', 'RBI', 'SAC', 'SF', 'BB', 'HBP', 'SO', 'GDP', 'TB%']
-            df = pd.DataFrame(all_data, columns=columns[:len(all_data[0])] if all_data else columns)
+            if Position =='HitterBasic' :
+                if Page == 'Basic1':
+                    columns = ['순위', '선수명', '팀명', 'AVG', 'G', 'PA', 'AB', 'R', 'H', 
+                                '2B', '3B', 'HR', 'TB', 'RBI', 'SAC', 'SF', 'BB', 'HBP', 'SO', 'GDP', 'TB%']
+                elif Page == 'Basic2':
+                    columns = ['순위', '선수명', '팀명', 'AVG', 'BB', 'IBB', 'HBP', 'SO', 'GDP', 'SLG', 'OBP', 'OPS', 'MH', 'RISP', 'PH-BA']
+                elif Page == 'Detail1':
+                    columns = ['순위', '선수명', '팀명', 'AVG', 'XBH', 'GO', 'AO', 'GO/AO', 'GW RBI', 'BB/K', 'P/PA', 'ISOP', 'XR', 'GPA']
+            elif Position =='PitcherBasic' :
+                if Page == 'Basic1':
+                    columns = ['순위', '선수명', '팀명', 'ERA', 'G', 'W', 'L', 'SV', 'HLD', 'WPCT', 'IP', 'H', 'HR', 'BB', 'HBP','SO','R','ER','WHIP']
+                elif Page == 'Basic2':
+                    columns = ['순위', '선수명', '팀명', 'ERA', 'CG', 'SHO', 'QS', 'BSV', 'TBF', 'NP', 'AVG', '2B', '3B', 'SAC', 'SF','IBB','WP','BK']
+                elif Page == 'Detail1':
+                    columns = ['순위', '선수명', '팀명', 'ERA', 'GS', 'Wgs', 'Wgr', 'GF', 'SVO', 'TS', 'GDP', 'GO', 'AO', 'GO/AO']
+            elif Position =='Defense' :
+                columns = ['순위', '선수명', '팀명', 'POS', 'G', 'GS', 'IP', 'E', 'PKO', 'PO', 'A', 'DP', 'FPCT', 'PB', 'SB','SB','CS','CS%']
+            elif Position =='Runner' :
+                columns = ['순위', '선수명', '팀명', 'G', 'SBA', 'SB', 'CS', 'SB%', 'OOB', 'PKO']
 
+
+            df = pd.DataFrame(all_data, columns=columns[:len(all_data[0])] if all_data else columns)
             # CSV 저장
-            output_file = "./Data/kbo_2025_hitter_"+team+".csv"
+            output_file = "./Data/"+team+"/kbo_"+year+"_"+Position+"_"+team+"_"+Page+".csv"
 
             df.to_csv(output_file, index=False, encoding='utf-8-sig')
-            print(f"완료! {team}팀 {len(df)}명의 선수 데이터가 {output_file}에 저장되었습니다.[web:3][web:5]")
+            #print(f"완료! {team}팀 {len(df)}명의 선수 데이터가 {output_file}에 저장되었습니다.[web:3][web:5]")
     finally:
         driver.quit()
     
-    # return all_data
-
-# 실행
 print("KBO 타자 기록 크롤링 시작...")
-get_all_player_data()
+
+# 타자 첫번째 기록
+get_all_player_data("2025","HitterBasic","Basic1")
+print( "Hitter Basic1 완료 ")
+
+# 타자 두번째 기록
+get_all_player_data("2025","HitterBasic","Basic2")
+print( " Hitter Basic2 완료 ")
+
+# 타자 상세 기록
+get_all_player_data("2025","HitterBasic","Detail1")
+print( "Hitter Detail1 완료 ")
+
+print("KBO 타자 기록 크롤링 종료")
+
+# 투수
+print("KBO 투수 기록 크롤링 시작...")
+
+# 투수 첫번째 기록
+get_all_player_data("2025","PitcherBasic","Basic1")
+print( " Pitcher Basic1 완료 ")
+
+# 투수 두번째 기록
+get_all_player_data("2025","PitcherBasic","Basic2")
+print( " Pitcher Basic2 완료 ")
+
+
+# 투수 상세 기록
+get_all_player_data("2025","PitcherBasic","Detail1")
+print( " Pitcher Detail1 완료 ")
+
+
+print("KBO 투수 기록 크롤링 종료")
+
+# 수비 기록
+get_all_player_data("2025","Defense","Basic")
+print( "Defense 완료 ")
+
+# 주루 기록
+get_all_player_data("2025","Runner","Basic")
+print( "Runner 완료 ")
 
 print("모든 팀 크롤링 완료")
-
-# # DataFrame 생성 (컬럼명은 페이지 thead 기준)
-# columns = ['순위', '선수명', '팀명', 'AVG', 'G', 'PA', 'AB', 'R', 'H', 
-#            '2B', '3B', 'HR', 'TB', 'RBI', 'SAC', 'SF', 'BB', 'HBP', 'SO', 'GDP', 'TB%']
-# df = pd.DataFrame(raw_data, columns=columns[:len(raw_data[0])] if raw_data else columns)
-
-# # CSV 저장
-# output_file = './Data/kbo_2025_hitter_all.csv'
-# df.to_csv(output_file, index=False, encoding='utf-8-sig')
-# print(f"완료! {len(df)}명의 선수 데이터가 {output_file}에 저장되었습니다.[web:3][web:5]")
